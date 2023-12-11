@@ -1,7 +1,9 @@
 import copy
 from components.episode_buffer import EpisodeBatch
 from modules.mixers.vdn import VDNMixer
-from modules.mixers.qmix import QMixer
+from modules.mixers.qmix import QMixer\
+
+import numpy as np
 import torch as th
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -62,7 +64,6 @@ class MASIALearner:
         terminated = batch["terminated"].float()
         mask = batch["filled"].float()
         mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
-
         # go through vae
         recons, z = [], []
         self.mac.init_hidden(batch.batch_size)  # useless in current version
@@ -77,7 +78,7 @@ class MASIALearner:
         mask_recons, mask_z = [], []
         self.mac.init_hidden(batch.batch_size)  
         for t in range(batch.max_seq_length):
-            mask_recons_t, _,mask_z_t = self.mac.vae_forward(batch, t) 
+            mask_recons_t, _,mask_z_t = self.mac.mask_vae_forward(batch, t) 
             mask_recons.append(mask_recons_t)
             mask_z.append(mask_z_t)
         # recons.shape: [batch_size, seq_len, state_repre_dim]
@@ -106,9 +107,11 @@ class MASIALearner:
             # Do final vector prediction*******************************************************
             predicted_f = self.mac.agent.online_projection(curr_z)   # [bs, seq_len, spr_dim]#通过 self.projection,和 self.final_classifier所得到的一个表示
             tot_spr_loss = self.compute_spr_loss(predicted_f, target_projected, mask)#compute_spr_loss相当于就是把mask引入后把前两项做MSE误差计算
-            #if  self.args.use_inverse_model:
-                #TODO
-                #tot_inv_loss = 
+            if  self.args.use_inverse_model:
+                predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
+                predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
+                tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
             if  self.args.use_rew_pred:
                 predicted_rew = self.latent_model.predict_reward(curr_z)   # [bs, seq_len, 1]
                 tot_rew_loss = self.compute_rew_loss(predicted_rew, rewards, mask)
@@ -123,10 +126,10 @@ class MASIALearner:
                 tot_spr_loss += self.compute_spr_loss(predicted_f, target_projected[:, t+1:], mask[:, t+1:])#target_projected是包含1~t+K的
 
                 if self.args.use_inverse_model:
-                    # predicted_act = self.latent_model.predict_action(original_z,target_projected[:, t+1:])
-                    # predicted_act = self.latent_model.predict_action(z[:,:-1],z[:,1:])
-                    # curr_act = self.latent_model.predict_action(z[])
-                    tot_inv_loss += self.compute_inv_loss(predicted_act, actions_onehot[:, :-1], mask[:, :-1])
+                    predicted_act = F.softmax(self.latent_model.predict_action(z[:,t:-1],z[:,t+1:]),dim=-1)
+                    predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                    sample_act = actions_onehot[:,t:-1].reshape(*actions_onehot[:,t:-1].shape[:-2], -1)
+                    tot_inv_loss += self.compute_inv_loss(predicted_act, sample_act, mask[:,t:-1])
                 if self.args.use_rew_pred:
                     predicted_rew = self.latent_model.predict_reward(curr_z)
                     tot_rew_loss += self.compute_rew_loss(predicted_rew, rewards[:, t+1:], mask[:, t+1:])
@@ -168,10 +171,9 @@ class MASIALearner:
         return mask_spr_loss
     
     def compute_inv_loss(self, pred_a, target_a, mask):
-        # pred_a.shape: [bs, seq_len, n_agents, n_actions]
+        # pred_a.shape: [bs, seq_len, n_agents*n_actions]
         # mask.shape: [bs, seq_len, 1]
-        # mask = mask.squeeze(-1)
-        mask = mask.expand(32,50,11)
+        mask = mask.squeeze(-1)
         act_loss = F.mse_loss(pred_a, target_a, reduction="none").sum(-1)
         mask_action_loss = (act_loss * mask).sum() / mask.sum()
         return mask_action_loss
@@ -243,9 +245,8 @@ class MASIALearner:
 
         # Td-error
         td_error = (chosen_action_qvals - targets.detach())
-
+        
         mask = mask.expand_as(td_error)
-
         # 0-out the targets that came from padded data
         masked_td_error = td_error * mask
 

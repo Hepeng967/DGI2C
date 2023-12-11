@@ -35,7 +35,7 @@ class JoinNEnv(MultiAgentEnv):
         np.random.seed(self._seed)
         self.n_agents = n_agents
         self.n_states = np.array(state_numbers,
-                                 dtype=np.int)
+                                 dtype=int)
 
         # Observations and state
         self.obs_last_action = obs_last_action
@@ -65,7 +65,7 @@ class JoinNEnv(MultiAgentEnv):
 
         # initialize agents
         self.state_n = np.array([np.random.randint(low=1, high=self.n_states[i]+1) for i in range(self.n_agents)],
-                                dtype=np.int)
+                                dtype=int)
 
         # self.group_members = [[] for _ in range(self.n_groups)]
         # self.status_by_group = [[] for _ in range(self.n_groups)]
@@ -179,7 +179,7 @@ class JoinNEnv(MultiAgentEnv):
         self._episode_steps = 0
         self.last_action = np.zeros((self.n_agents, self.n_actions))
         self.state_n = np.array([np.random.randint(low=1, high=self.n_states[i]+1) for i in range(self.n_agents)],
-                                dtype=np.int)
+                                dtype=int)
         self.active_group = [True for _ in range(self.n_groups)]
         self.active_agent = np.array([True for _ in range(self.n_agents)])
         self._win_group = 0

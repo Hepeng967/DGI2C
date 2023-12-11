@@ -1,6 +1,7 @@
 from modules.agents import REGISTRY as agent_REGISTRY
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
+import random
 
 
 # This multi-agent controller shares parameters between agents
@@ -57,7 +58,18 @@ class MASIAMAC:
             return state_repr.view(ep_batch.batch_size, self.n_agents, -1)
 
     def vae_forward(self, ep_batch, t, test_mode=False):
-        agent_inputs = self._build_supplement_inputs(ep_batch, t)
+        agent_inputs = self._build_inputs(ep_batch, t)
+        if "vae" in self.args.state_encoder:
+            recons, input, mu, log_var, self.encoder_hidden_states = self.agent.vae_forward(agent_inputs, self.encoder_hidden_states)
+            return recons, input, mu, log_var
+        elif "ae" in self.args.state_encoder:
+            recons, input, z, self.encoder_hidden_states = self.agent.vae_forward(agent_inputs, self.encoder_hidden_states)
+            return recons, input, z
+        else:
+            raise ValueError("Unsupported state encoder type!")
+        
+    def mask_vae_forward(self, ep_batch, t, test_mode=False):
+        agent_inputs = self._build_mask_inputs(ep_batch, t)
         if "vae" in self.args.state_encoder:
             recons, input, mu, log_var, self.encoder_hidden_states = self.agent.vae_forward(agent_inputs, self.encoder_hidden_states)
             return recons, input, mu, log_var
@@ -122,38 +134,6 @@ class MASIAMAC:
         inputs = th.cat([x.reshape(bs*self.n_agents, -1) for x in inputs], dim=1)
         return inputs
     
-    # def _build_mask_inputs(self, batch, t):
-    #     # Assumes homogenous agents with flat observations.
-    #     # Other MACs might want to e.g. delegate building inputs to each agent
-    #     bs = batch.batch_size
-    #     inputs = []
-    #     mask_obs_input = self._mask_input(batch["obs"][:, t])
-    #     print("mask_obs_input",mask_obs_input.shape)
-    #     self.mask_obs.append(mask_obs_input)
-    #     print("mask_obs_len",len(self.mask_obs))
-    #     if self.args.obs_use_sequence_sup:
-    #         k = 10
-    #         sup_matrix = th.zeros_like(batch["obs"][:, t])
-    #         if t>=k:
-    #             obs_matrix = self.mask_obs[t-1]
-    #             print("obs_matrix",obs_matrix.shape)
-    #             replace_matrix = self.mask_obs[t-1-k]
-    #             print("replace_matrix",replace_matrix.shape)
-    #             sup_matrix = th.where((replace_matrix == 0),replace_matrix, obs_matrix)
-    #         else:
-    #             sup_matrix = mask_obs_input
-    #         inputs.append(sup_matrix)  # b1av batch["obs"][:, t].shape = [1,11,84]
-    #     else:
-    #         inputs.append(mask_obs_input)
-    #     if self.args.obs_last_action:
-    #         if t == 0:
-    #             inputs.append(th.zeros_like(batch["actions_onehot"][:, t]))
-    #         else:
-    #             inputs.append(batch["actions_onehot"][:, t-1])
-    #     if self.args.obs_agent_id:
-    #         inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).expand(bs, -1, -1))
-    #     inputs = th.cat([x.reshape(bs*self.n_agents, -1) for x in inputs], dim=1)
-    #     return inputs
 
     def _get_input_shape(self, scheme):
         input_shape = scheme["obs"]["vshape"]
@@ -170,7 +150,8 @@ class MASIAMAC:
         # Other MACs might want to e.g. delegate building inputs to each agent
         bs = batch.batch_size
         inputs = []
-        mask_inputs = self._mask_input(batch["obs"][:, t])
+        mask_inputs = batch["mask_obs"][:, t] 
+        print(mask_inputs)       
         inputs.append(mask_inputs)
         if self.args.obs_last_action:
             if t == 0:
@@ -214,3 +195,36 @@ class MASIAMAC:
         # 将指定行的数据全部设为0
         mask_matrix[:, rows_to_mask, :] = 0
         return mask_matrix
+    
+    def _get_mask_obs_dimension(self, batch, t):
+        bs = batch.batch_size
+        obs = batch["obs"][:, t]
+        dimension = len(obs[0][0]) 
+        ratio = self.args.ratio
+        mask_num = int(ratio*dimension)
+        # 将指定行的数据全部设为0
+        for i in range(bs):
+            for j in range(len(obs[0])):
+                mask_indices = random.sample(range(dimension), mask_num)
+                for idx in mask_indices:
+                    obs[i][j][idx] = 0
+        return obs
+        
+    def _get_mask_obs_agent(self, batch, t):
+        bs = batch.batch_size
+        obs = batch["obs"][:, t]
+        agentnum = len(obs[0])
+        ratio = self.args.ratio
+        mask_num = int(ratio*agentnum)
+        mask_agent = random.sample(range(agentnum), mask_num)
+        # 将指定行的数据全部设为0
+        for i in range(bs):
+            for row in mask_agent:
+                obs[i][row] = th.zeros_like(obs[i][row])
+        return obs
+    
+    def _get_mask_obs(self, batch, t):
+        if self.args.mask_method == "dimension":
+            return self._get_mask_obs_dimension(batch,t)
+        if self.args.mask_method == "agent":
+            return self._get_mask_obs_agent(batch,t)   
