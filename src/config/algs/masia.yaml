@@ -85,7 +85,8 @@ noise_env: False
 noise_type: 0 # 噪声类别分为0、1、2，分别表示发送方添加噪声、接收方全部添加和接收方部分添加 
 
 # config for mask
-mask_obs: True
+# mask_obs: True
+use_mask: True
 mask_num: 3
 ratio: 0.2
 mask_method: agent

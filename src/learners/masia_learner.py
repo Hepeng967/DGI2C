@@ -88,10 +88,13 @@ class MASIALearner:
 
         bs, seq_len  = states.shape[0], states.shape[1]
         #loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#返回的是{loss：||s^t - st||**2}
-        loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask后的z和recons去计算mae
+        if self.args.use_mask == True:
+            loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask后的z和recons去计算mae
+        elif self.args.use_mask == False:
+            loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))
         vae_loss = loss_dict["loss"].reshape(bs, seq_len, 1)
         mask = mask.expand_as(vae_loss)
-        masked_vae_loss = (vae_loss * mask).sum() / mask.sum()#TODO 其实还是不太懂这个地方mask的意义，感觉像是VAE自带的
+        vae_loss = (vae_loss * mask).sum() / mask.sum()#TODO 其实还是不太懂这个地方mask的意义，感觉像是VAE自带的
 
         if self.args.use_latent_model:
             # Compute target z first
@@ -135,16 +138,16 @@ class MASIALearner:
                     tot_rew_loss += self.compute_rew_loss(predicted_rew, rewards[:, t+1:], mask[:, t+1:])
             #这个地方的coef是yaml里面配置的，用来配置各个损失之间的权重
             if self.args.use_rew_pred and self.args.use_inverse_model:
-                repr_loss = masked_vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss + self.args.inv_coef * tot_inv_loss
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss + self.args.inv_coef * tot_inv_loss
                 
             elif self.args.use_rew_pred:
-                repr_loss = masked_vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
         else:
-            repr_loss = masked_vae_loss
+            repr_loss = vae_loss
 
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
-            self.logger.log_stat("vae_loss", masked_vae_loss.item(), t_env)
+            self.logger.log_stat("vae_loss", vae_loss.item(), t_env)
             if self.args.use_latent_model:
                 self.logger.log_stat("model_loss", tot_spr_loss.item(), t_env)
                 if self.args.use_rew_pred:

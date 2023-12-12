@@ -12,7 +12,6 @@ class MASIAMAC:
         input_shape = self._get_input_shape(scheme)
         self._build_agents(input_shape)
         self.agent_output_type = args.agent_output_type
-
         self.mask_obs = []
         self.action_selector = action_REGISTRY[args.action_selector](args)
         self.hidden_states = None
@@ -28,7 +27,10 @@ class MASIAMAC:
 
     def forward(self, ep_batch, t, test_mode=False):#用来选择动作的，最后输出的是一个Q表格
         agent_inputs = self._build_inputs(ep_batch, t)#agent_inputs.shape torch.Size([11, 95]，95是84+11是因为后面11行是add了agent的id矩阵(11*11))
-        agent_mask_inputs = self._build_mask_inputs(ep_batch, t)
+        if self.args.use_mask == True:
+            agent_mask_inputs = self._build_mask_inputs(ep_batch, t)
+        elif self.args.use_mask == False:
+            agent_mask_inputs = self._build_inputs(ep_batch, t)
         avail_actions = ep_batch["avail_actions"][:, t]
         agent_outs, self.hidden_states, self.encoder_hidden_states = self.agent(agent_inputs, agent_mask_inputs, self.hidden_states, self.encoder_hidden_states)
         
