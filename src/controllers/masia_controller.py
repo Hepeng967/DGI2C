@@ -153,8 +153,9 @@ class MASIAMAC:
         bs = batch.batch_size
         inputs = []
         mask_inputs = batch["mask_obs"][:, t] 
-        print(mask_inputs)       
         inputs.append(mask_inputs)
+        # print("mask_input_shape",len(mask_inputs),",",len(mask_inputs[0]),",",len(mask_inputs[0][0]))
+        # print("mask input",mask_inputs)
         if self.args.obs_last_action:
             if t == 0:
                 inputs.append(th.zeros_like(batch["actions_onehot"][:, t]))
@@ -166,37 +167,37 @@ class MASIAMAC:
         return inputs
         
         
-    def _build_supplement_inputs(self, batch, t):
-        bs = batch.batch_size
-        inputs = []
-        if self.args.obs_use_sequence_sup:
-            k = 1
-            mask_inputs = self._mask_input(batch["obs"][:, t])
-            sup_matrix = th.zeros_like(batch["obs"][:, t])
-            if t>=k:
-                #obs_matrix = batch["obs"][:, t]
-                replace_matrix = batch["obs"][:, t-k]
-                sup_matrix = th.where((replace_matrix == 0),replace_matrix, mask_inputs)
-            inputs.append(sup_matrix)  # b1av batch["obs"][:, t].shape = [1,11,84]
-        if self.args.obs_last_action:
-            if t == 0:
-                inputs.append(th.zeros_like(batch["actions_onehot"][:, t]))
-            else:
-                inputs.append(batch["actions_onehot"][:, t-1])
-        if self.args.obs_agent_id:
-            inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).expand(bs, -1, -1))
-        inputs = th.cat([x.reshape(bs*self.n_agents, -1) for x in inputs], dim=1)
-        return inputs
+    # def _build_supplement_inputs(self, batch, t):
+    #     bs = batch.batch_size
+    #     inputs = []
+    #     if self.args.obs_use_sequence_sup:
+    #         k = 1
+    #         mask_inputs = self._mask_input(batch["obs"][:, t])
+    #         sup_matrix = th.zeros_like(batch["obs"][:, t])
+    #         if t>=k:
+    #             #obs_matrix = batch["obs"][:, t]
+    #             replace_matrix = batch["obs"][:, t-k]
+    #             sup_matrix = th.where((replace_matrix == 0),replace_matrix, mask_inputs)
+    #         inputs.append(sup_matrix)  # b1av batch["obs"][:, t].shape = [1,11,84]
+    #     if self.args.obs_last_action:
+    #         if t == 0:
+    #             inputs.append(th.zeros_like(batch["actions_onehot"][:, t]))
+    #         else:
+    #             inputs.append(batch["actions_onehot"][:, t-1])
+    #     if self.args.obs_agent_id:
+    #         inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).expand(bs, -1, -1))
+    #     inputs = th.cat([x.reshape(bs*self.n_agents, -1) for x in inputs], dim=1)
+    #     return inputs
     
-    def _mask_input(self, input_tensor):
-        # 获取输入张量的形状
-        mask_matrix = input_tensor
-        # 随机生成要mask的行索引
-        num_rows_to_mask = self.args.mask_num  # 你可以根据需要调整要mask的行数
-        rows_to_mask = th.randint(0, 11, (num_rows_to_mask,))
-        # 将指定行的数据全部设为0
-        mask_matrix[:, rows_to_mask, :] = 0
-        return mask_matrix
+    # def _mask_input(self, input_tensor):
+    #     # 获取输入张量的形状
+    #     mask_matrix = input_tensor
+    #     # 随机生成要mask的行索引
+    #     num_rows_to_mask = self.args.mask_num  # 你可以根据需要调整要mask的行数
+    #     rows_to_mask = th.randint(0, 11, (num_rows_to_mask,))
+    #     # 将指定行的数据全部设为0
+    #     mask_matrix[:, rows_to_mask, :] = 0
+    #     return mask_matrix
     
     def _get_mask_obs_dimension(self, batch, t):
         bs = batch.batch_size
@@ -218,7 +219,9 @@ class MASIAMAC:
         agentnum = len(obs[0])
         ratio = self.args.ratio
         mask_num = int(ratio*agentnum)
+        # print("mask_num",mask_num)
         mask_agent = random.sample(range(agentnum), mask_num)
+        # print("mask_agent",mask_agent)
         # 将指定行的数据全部设为0
         for i in range(bs):
             for row in mask_agent:
