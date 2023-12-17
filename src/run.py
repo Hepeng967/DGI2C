@@ -154,8 +154,9 @@ def run_sequential(args, logger):
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
-    if "unit_dim" in env_info:
-        args.unit_dim = env_info["unit_dim"]
+    # if "agent_features" in env_info:#原本是if"unit_dim" in env_info
+    print("args.unit_dim",env_info["agent_features"])
+    args.unit_dim = len(env_info["agent_features"])#g给dmaq_qatten_weight用的
 
     # Default/Base scheme
     scheme = {

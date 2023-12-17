@@ -81,3 +81,12 @@ name: "masia_vdn"
 # config for robust communication
 noise_env: False
 noise_type: 0 # 噪声类别分为0、1、2，分别表示发送方添加噪声、接收方全部添加和接收方部分添加 
+
+# config for DGI2C
+# mask_obs: True
+# mask_num: 3
+use_mask: False
+ratio: 0.2
+mask_method: agent
+use_inverse_model: True
+inv_coef: 1

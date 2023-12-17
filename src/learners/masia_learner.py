@@ -90,6 +90,7 @@ class MASIALearner:
         #loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#返回的是{loss：||s^t - st||**2}
         if self.args.use_mask == True:
             loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask后的z和recons去计算mae
+            # print("mask_recons")
         elif self.args.use_mask == False:
             loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))
         vae_loss = loss_dict["loss"].reshape(bs, seq_len, 1)
@@ -142,6 +143,8 @@ class MASIALearner:
                 
             elif self.args.use_rew_pred:
                 repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
+            else:
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
         else:
             repr_loss = vae_loss
 

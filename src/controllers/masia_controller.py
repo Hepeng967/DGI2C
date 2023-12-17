@@ -29,6 +29,7 @@ class MASIAMAC:
         agent_inputs = self._build_inputs(ep_batch, t)#agent_inputs.shape torch.Size([11, 95]，95是84+11是因为后面11行是add了agent的id矩阵(11*11))
         if self.args.use_mask == True:
             agent_mask_inputs = self._build_mask_inputs(ep_batch, t)
+            # print("forward mask")
         elif self.args.use_mask == False:
             agent_mask_inputs = self._build_inputs(ep_batch, t)
         avail_actions = ep_batch["avail_actions"][:, t]

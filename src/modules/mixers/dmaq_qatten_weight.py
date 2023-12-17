@@ -13,7 +13,7 @@ class Qatten_Weight(nn.Module):
         self.args = args
         self.n_agents = args.n_agents
         self.state_dim = int(np.prod(args.state_shape))
-        self.unit_dim = args.unit_dim
+        self.unit_dim = int(args.unit_dim)
         self.n_actions = args.n_actions
         self.sa_dim = self.state_dim + self.n_agents * self.n_actions
         self.n_head = args.n_head  # attention head num
@@ -49,7 +49,7 @@ class Qatten_Weight(nn.Module):
         unit_states = states[:, : self.unit_dim * self.n_agents]  # get agent own features from state
         unit_states = unit_states.reshape(-1, self.n_agents, self.unit_dim)
         unit_states = unit_states.permute(1, 0, 2)
-
+        
         agent_qs = agent_qs.view(-1, 1, self.n_agents)  # agent_qs: (batch_size, 1, agent_num)
 
         if self.args.nonlinear:
