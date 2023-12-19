@@ -5,7 +5,7 @@ import random
 
 
 # This multi-agent controller shares parameters between agents
-class MASIAMAC:
+class DGI2CMAC:
     def __init__(self, scheme, groups, args):
         self.n_agents = args.n_agents
         self.args = args

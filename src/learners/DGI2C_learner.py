@@ -10,7 +10,7 @@ from torch.optim import Adam
 from components.standarize_stream import RunningMeanStd
 import os
 
-class MASIALearner:
+class DGI2CLearner:
     def __init__(self, mac, latent_model, scheme, logger, args):
         self.args = args
         self.mac = mac

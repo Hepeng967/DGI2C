@@ -5,8 +5,8 @@ from .actor_critic_learner import ActorCriticLearner
 from .maddpg_learner import MADDPGLearner
 from .ppo_learner import PPOLearner
 from .dmaq_qatten_learner import DMAQ_qattenLearner
-from .masia_learner import MASIALearner
-from .masia_qplex_learner import MASIALearner as MASIAQPLEXLearner
+from .DGI2C_learner import DGI2CLearner
+from .DGI2C_qplex_learner import DGI2CLearner as DGI2CQPLEXLearner
 
 REGISTRY = {}
 
@@ -17,5 +17,5 @@ REGISTRY["actor_critic_learner"] = ActorCriticLearner
 REGISTRY["maddpg_learner"] = MADDPGLearner
 REGISTRY["ppo_learner"] = PPOLearner
 REGISTRY["dmaq_qatten_learner"] = DMAQ_qattenLearner
-REGISTRY["masia_learner"] = MASIALearner
-REGISTRY["masia_qplex_learner"] = MASIAQPLEXLearner
+REGISTRY["DGI2C_learner"] = DGI2CLearner
+REGISTRY["DGI2C_qplex_learner"] = DGI2CQPLEXLearner

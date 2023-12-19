@@ -36,7 +36,7 @@ def my_main(_run, _config, _log):
 
     # run the framework
     # TODO: add a property to determine whether use msra
-    if "masia" in config["name"]:
+    if "DGI2C" in config["name"]:
         msra_run(_run, config, _log)
     else:
         run(_run, config, _log)

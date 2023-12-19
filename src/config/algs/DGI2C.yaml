@@ -26,12 +26,12 @@ standardise_returns: False
 standardise_rewards: True
 
 # Focus on: mac, agent, learner, mixer, use_rnn
-mac: "masia_mac"
-agent: "masia"
+mac: "DGI2C_mac"
+agent: "DGI2C"
 agent_output_type: "q"
-learner: "masia_learner"
+learner: "DGI2C_learner"
 double_q: True
-mixer: "vdn"
+mixer: "qmix"
 use_rnn: True
 mixing_embed_dim: 32
 hypernet_layers: 2
@@ -59,6 +59,7 @@ momentum_tau: 1
 # configs about whether to use latent model learning
 use_latent_model: True
 use_rew_pred: True
+use_inverse_model: True
 use_momentum_encoder: True
 use_residual: True
 pred_len: 2
@@ -72,11 +73,12 @@ rl_signal: True
 spr_coef: 1
 rew_pred_coef: 1
 repr_coef: 1
+inv_coef: 1
 
 # config about encoder testing/visualization
 test_encoder: False
 
-name: "masia_vdn"
+name: "hwg_1_DGI2C"
 
 # config for robust communication
 noise_env: False
@@ -89,4 +91,6 @@ use_mask: False
 ratio: 0.2
 mask_method: agent
 use_inverse_model: True
-inv_coef: 1
+
+# config for supplement inputs
+obs_use_sequence_sup: True

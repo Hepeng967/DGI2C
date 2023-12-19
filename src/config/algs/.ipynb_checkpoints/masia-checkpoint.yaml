@@ -26,10 +26,10 @@ standardise_returns: False
 standardise_rewards: True
 
 # Focus on: mac, agent, learner, mixer, use_rnn
-mac: "masia_mac"
-agent: "masia"
+mac: "DGI2C_mac"
+agent: "DGI2C"
 agent_output_type: "q"
-learner: "masia_learner"
+learner: "DGI2C_learner"
 double_q: True
 mixer: "qmix"
 use_rnn: True
@@ -76,7 +76,7 @@ repr_coef: 1
 # config about encoder testing/visualization
 test_encoder: False
 
-name: "hwg_1_masia"
+name: "hwg_1_DGI2C"
 
 # config for robust communication
 noise_env: False

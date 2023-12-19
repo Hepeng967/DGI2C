@@ -9,13 +9,13 @@ from modules.state_encoders import REGISTRY as state_enc_REGISTRY
 from types import SimpleNamespace as SN
 
 
-class MASIAAgent(nn.Module):
+class DGI2CAgent(nn.Module):
     """
         VAE State Estimation Agent
         Each agent make decision based on estimated z and its observation
     """
     def __init__(self, input_shape, args):
-        super(MASIAAgent, self).__init__()
+        super(DGI2CAgent, self).__init__()
         self.args = args
         self.raw_input_shape = self._get_input_shape(input_shape)
         
