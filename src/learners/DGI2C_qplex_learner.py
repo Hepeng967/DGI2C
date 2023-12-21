@@ -10,7 +10,7 @@ from torch.optim import Adam
 from components.standarize_stream import RunningMeanStd
 import os
 
-class MASIALearner:
+class DGI2CLearner:
     def __init__(self, mac, latent_model, scheme, logger, args):
         self.args = args
         self.mac = mac
@@ -80,12 +80,26 @@ class MASIALearner:
         # recons.shape: [batch_size, seq_len, state_repre_dim]
         recons = th.stack(recons, dim=1)  # Concat over time
         z = th.stack(z, dim=1)
+        
+        mask_recons, mask_z = [], []
+        self.mac.init_hidden(batch.batch_size)  
+        for t in range(batch.max_seq_length):
+            mask_recons_t, _,mask_z_t = self.mac.mask_vae_forward(batch, t) 
+            mask_recons.append(mask_recons_t)
+            mask_z.append(mask_z_t)
+        # recons.shape: [batch_size, seq_len, state_repre_dim]
+        mask_recons = th.stack(mask_recons, dim=1)  # Concat over time
+        mask_z = th.stack(mask_z, dim=1)
 
         bs, seq_len  = states.shape[0], states.shape[1]
-        loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))
+        if self.args.use_mask == True:
+            loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask后的z和recons去计算mae
+            # print("mask_recons")
+        elif self.args.use_mask == False:
+            loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))
         vae_loss = loss_dict["loss"].reshape(bs, seq_len, 1)
         mask = mask.expand_as(vae_loss)
-        masked_vae_loss = (vae_loss * mask).sum() / mask.sum()
+        vae_loss = (vae_loss * mask).sum() / mask.sum()
 
         if self.args.use_latent_model:
             # Compute target z first
@@ -101,6 +115,11 @@ class MASIALearner:
             # Do final vector prediction
             predicted_f = self.mac.agent.online_projection(curr_z)   # [bs, seq_len, spr_dim]
             tot_spr_loss = self.compute_spr_loss(predicted_f, target_projected, mask)
+            if  self.args.use_inverse_model:
+                predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
+                predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
+                tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
             if self.args.use_rew_pred:
                 predicted_rew = self.latent_model.predict_reward(curr_z)   # [bs, seq_len, 1]
                 tot_rew_loss = self.compute_rew_loss(predicted_rew, rewards, mask)
@@ -110,24 +129,32 @@ class MASIALearner:
                 # Do final vector prediction
                 predicted_f = self.mac.agent.online_projection(curr_z)  # [bs, seq_len, spr_dim]
                 tot_spr_loss += self.compute_spr_loss(predicted_f, target_projected[:, t+1:], mask[:, t+1:])
+                if self.args.use_inverse_model:
+                    predicted_act = F.softmax(self.latent_model.predict_action(z[:,t:-1],z[:,t+1:]),dim=-1)
+                    predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                    sample_act = actions_onehot[:,t:-1].reshape(*actions_onehot[:,t:-1].shape[:-2], -1)
+                    tot_inv_loss += self.compute_inv_loss(predicted_act, sample_act, mask[:,t:-1])
                 if self.args.use_rew_pred:
                     predicted_rew = self.latent_model.predict_reward(curr_z)
                     tot_rew_loss += self.compute_rew_loss(predicted_rew, rewards[:, t+1:], mask[:, t+1:])
-            
-            if self.args.use_rew_pred:
-                repr_loss = masked_vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
+            if self.args.use_rew_pred and self.args.use_inverse_model:
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss + self.args.inv_coef * tot_inv_loss
+            elif self.args.use_rew_pred:
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
             else:
-                repr_loss = masked_vae_loss + self.args.spr_coef * tot_spr_loss
+                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
         else:
-            repr_loss = masked_vae_loss
+            repr_loss = vae_loss
 
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
-            self.logger.log_stat("vae_loss", masked_vae_loss.item(), t_env)
+            self.logger.log_stat("vae_loss", vae_loss.item(), t_env)
             if self.args.use_latent_model:
                 self.logger.log_stat("model_loss", tot_spr_loss.item(), t_env)
                 if self.args.use_rew_pred:
                     self.logger.log_stat("rew_pred_loss", tot_rew_loss.item(), t_env)
+                    if self.args.use_inverse_model:
+                        self.logger.log_stat("inverse_model_loss",tot_inv_loss.item(), t_env)
 
         return repr_loss
     
@@ -146,6 +173,14 @@ class MASIALearner:
         spr_loss = F.mse_loss(pred_f, target_f, reduction="none").sum(-1)
         mask_spr_loss = (spr_loss * mask).sum() / mask.sum()
         return mask_spr_loss
+    
+    def compute_inv_loss(self, pred_a, target_a, mask):
+        # pred_a.shape: [bs, seq_len, n_agents*n_actions]
+        # mask.shape: [bs, seq_len, 1]
+        mask = mask.squeeze(-1)
+        act_loss = F.mse_loss(pred_a, target_a, reduction="none").sum(-1)
+        mask_action_loss = (act_loss * mask).sum() / mask.sum()
+        return mask_action_loss
 
     def rl_train(self, batch: EpisodeBatch, t_env: int, episode_num: int, repr_loss):
         # Get the relevant quantities

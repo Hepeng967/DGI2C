@@ -39,6 +39,12 @@ class TransitionModel(nn.Module):
         )
         
         #加入predict_action需要的网络定义
+        self.inverse_state_embed = nn.Sequential(
+            nn.Linear(state_repre_dim, args.model_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.model_hidden_dim, args.model_hidden_dim),
+        )
+        
         self.next_state_embed = nn.Sequential(
             nn.Linear(state_repre_dim, args.model_hidden_dim),
             nn.ReLU(),
@@ -83,7 +89,7 @@ class TransitionModel(nn.Module):
             next_state = next_state.flatten(-2, -1)
         # Compute embeddings for next state and current state representations
         next_state_embed = self.next_state_embed(next_state)
-        state_repre_embed = self.state_repre_embed(state_repre)
+        state_repre_embed = self.inverse_state_embed(state_repre)
         # Concatenate embeddings for prediction
         joint_state_embed = th.cat([next_state_embed, state_repre_embed], dim=-1)
         # Predict actions

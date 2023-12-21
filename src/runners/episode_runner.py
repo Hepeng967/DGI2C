@@ -33,7 +33,7 @@ class EpisodeRunner:
 
     def get_env_info(self):
         return self.env.get_env_info()
-
+    
     def save_replay(self):
         self.env.save_replay()
 
@@ -51,16 +51,17 @@ class EpisodeRunner:
         terminated = False
         episode_return = 0
         self.mac.init_hidden(batch_size=self.batch_size)
-
         while not terminated:
-
+            
             pre_transition_data = {
                 "state": [self.env.get_state()],
                 "avail_actions": [self.env.get_avail_actions()],
                 "obs": [self.env.get_obs()],
-                "mask_obs": [self.env.get_mask_obs()],
+                #"mask_obs": [self.env.get_mask_dimension()],
             }
             self.batch.update(pre_transition_data, ts=self.t)
+            mask_obs = self.mac._get_mask_obs(self.batch, t=self.t)
+            self.batch.update({"mask_obs": mask_obs}, ts=self.t)
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
@@ -85,9 +86,11 @@ class EpisodeRunner:
             "state": [self.env.get_state()],
             "avail_actions": [self.env.get_avail_actions()],
             "obs": [self.env.get_obs()],
-            "mask_obs": [self.env.get_mask_obs()],
+            #"mask_obs": [self.env.get_mask_dimension()],
         }
         self.batch.update(last_data, ts=self.t)
+        last_mask_obs = self.mac._get_mask_obs(self.batch, t=self.t)
+        self.batch.update({"mask_obs":last_mask_obs}, ts=self.t)
 
         # Select actions in the last stored state
         actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)

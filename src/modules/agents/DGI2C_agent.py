@@ -9,13 +9,13 @@ from modules.state_encoders import REGISTRY as state_enc_REGISTRY
 from types import SimpleNamespace as SN
 
 
-class MASIAAgent(nn.Module):
+class DGI2CAgent(nn.Module):
     """
         VAE State Estimation Agent
         Each agent make decision based on estimated z and its observation
     """
     def __init__(self, input_shape, args):
-        super(MASIAAgent, self).__init__()
+        super(DGI2CAgent, self).__init__()
         self.args = args
         self.raw_input_shape = self._get_input_shape(input_shape)
         
@@ -74,7 +74,7 @@ class MASIAAgent(nn.Module):
         # make hidden_states on same device as model
         return self.fc1.weight.new(1, self.args.encoder_hidden_dim).zero_()
 
-    def forward(self, inputs, mask_inputs, hidden_state, encoder_hidden_state):
+    def forward(self, inputs, mask_input,hidden_state, encoder_hidden_state):
         # inputs.shape: [batch_size*n_agents, input_shape]
         
         bs = inputs.shape[0] // self.args.n_agents
@@ -89,7 +89,7 @@ class MASIAAgent(nn.Module):
                 # TODO: not exactly right !!!
                 noise = th.randn(*inputs.shape)
                 inputs += noise.to(inputs.device)
-                z, encoder_h = self.encoder.encode(mask_inputs, encoder_hidden_state)
+                z, encoder_h = self.encoder.encode(mask_input, encoder_hidden_state)
             elif self.args.noise_env and self.args.noise_type == 1:    
                 # inputs.shape: [bs, n_agents, n_agents, input_dim]
                 inputs = inputs.reshape(bs, self.args.n_agents, inputs.shape[-1]).unsqueeze(1).repeat(1, self.args.n_agents, 1, 1)
@@ -98,10 +98,10 @@ class MASIAAgent(nn.Module):
                 inputs = (inputs + (noise * mask).to(inputs.device)).flatten(0, 2)
                 # z.shape: [bs * n_agents, z_dim]
                 # TODO: fix this bug
-                z, encoder_h = self.encoder.encode(mask_inputs, encoder_hidden_state)                
+                z, encoder_h = self.encoder.encode(mask_input, encoder_hidden_state)                
             
             elif not self.args.noise_env:
-                z, encoder_h = self.encoder.encode(mask_inputs, encoder_hidden_state)
+                z, encoder_h = self.encoder.encode(mask_input, encoder_hidden_state)
             else:
                 raise ValueError("Don't get here!!!")
         else:
@@ -276,21 +276,21 @@ class MASIAAgent(nn.Module):
         extra_inputs = inputs[:, self.raw_input_shape:]
         return base_inputs, extra_inputs
     
-    def _build_mask_input(self, inputs):
-        # inputs.shape: [batch_size*n_agents, input_shape]
-        bs = inputs.shape[0] // self.args.n_agents
-        mask_ratio = 0.75
-        musked_num = self.mask_ratio * self.args.n_agents
-        indices_matrix= th.arange(0,inputs.shape(0)).reshape(bs*self.args.n_agents)
-        random_indices = th.randperm(self.args.n_agents)
-        shuffled_matrix = indices_matrix[:, random_indices]
-        mask_ind, unmask_ind = shuffled_matrix[:,:musked_num] , shuffled_matrix[:,musked_num:]
-        mask_flatten_ind,unmask_flatten_ind = th.flatten(mask_ind),th.flatten(unmask_ind)
-        mask_matrix = inputs[mask_flatten_ind] = 0
-        mask_matrix = inputs[mask_flatten_ind != 0] = 1 
-        mask_matrix = th.tensor(mask_matrix)
-        unmask_matrix = th.tensor(unmask_matrix)
-        return mask_matrix,unmask_matrix  
+    # def _build_mask_input(self, inputs):
+    #     # inputs.shape: [batch_size*n_agents, input_shape]
+    #     bs = inputs.shape[0] // self.args.n_agents
+    #     mask_ratio = 0.75
+    #     musked_num = self.mask_ratio * self.args.n_agents
+    #     indices_matrix= th.arange(0,inputs.shape(0)).reshape(bs*self.args.n_agents)
+    #     random_indices = th.randperm(self.args.n_agents)
+    #     shuffled_matrix = indices_matrix[:, random_indices]
+    #     mask_ind, unmask_ind = shuffled_matrix[:,:musked_num] , shuffled_matrix[:,musked_num:]
+    #     mask_flatten_ind,unmask_flatten_ind = th.flatten(mask_ind),th.flatten(unmask_ind)
+    #     mask_matrix = inputs[mask_flatten_ind] = 0
+    #     mask_matrix = inputs[mask_flatten_ind != 0] = 1 
+    #     mask_matrix = th.tensor(mask_matrix)
+    #     unmask_matrix = th.tensor(unmask_matrix)
+    #     return mask_matrix,unmask_matrix  
 
     def _get_input_shape(self, input_shape):
         """get raw env obs shape"""

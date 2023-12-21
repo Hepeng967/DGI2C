@@ -90,7 +90,6 @@ class ObAttnAEEnc(nn.Module):
         value = self.value(inputs).reshape(bs, self.n_agents, self.args.encoder_hidden_dim)
         # attn_out.shape: [bs, n_agents, hidden_dim]
         attn_out = self_attention(query, key, value, self.args.attn_embed_dim).reshape(bs*self.n_agents, self.args.encoder_hidden_dim)
-        
         # h_in: [bs*n_agents, hidden_dim]
         h_in = encoder_hidden_state.reshape(-1, self.args.encoder_hidden_dim)
         if self.args.encoder_use_rnn:
@@ -101,6 +100,7 @@ class ObAttnAEEnc(nn.Module):
         # z.shape: [bs*n_agents, latent_dim]
         z = self.encoder(h).reshape(bs, self.n_agents*self.latent_dim)
         return z, h
+
 
     def decode(self, z):
         # z.shape: [bs, n_agents*latent_dim]
