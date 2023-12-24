@@ -147,11 +147,11 @@ class DGI2CLearner:
             repr_loss = vae_loss
             
         if  self.args.use_inverse_model:
-                predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
-                predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
-                sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
-                tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
-                repr_loss += tot_inv_loss
+            predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
+            predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+            sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
+            tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
+            repr_loss += tot_inv_loss
         
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
