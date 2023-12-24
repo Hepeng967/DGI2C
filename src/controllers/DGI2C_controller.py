@@ -204,19 +204,32 @@ class DGI2CMAC:
         # print("地图名称测试",self.args.env_args['map_name'])
         bs = batch.batch_size
         obs = batch["obs"][:, t]
-        dimension = len(obs[0][0]) 
+        dimension = len(obs[0][0])
         ratio = self.args.ratio
-        mask_num = int(ratio*dimension)
+        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r' and self.args.use_prior == True:
+            mask_num = int(ratio*(dimension-14))
+        elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r' and self.args.use_prior == True:
+            mask_num = int(ratio*(dimension-35))
+            print(mask_num)
+        elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '5z_vs_1ul' and self.args.use_prior == True:
+            mask_num = int(ratio*(dimension-11))
+        else:
+            mask_num = int(ratio*dimension)
         # 将指定行的数据全部设为0
         for i in range(bs):
-            if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r':
+            if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r' and self.args.use_prior == True:
                 for j in range(len(obs[0])-1):#这个图最后一行是o
-                    mask_indices = random.sample(range(dimension), mask_num)
+                    mask_indices = random.sample(range(11,dimension-3), mask_num)
                     for idx in mask_indices:
                         obs[i][j][idx] = 0
-            if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r':
+            elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r' and self.args.use_prior == True:
                 for j in range(1,len(obs[0])):#这个图第一行是o
-                    mask_indices = random.sample(range(dimension), mask_num)
+                    mask_indices = random.sample(range(32,dimension-3), mask_num)
+                    for idx in mask_indices:
+                        obs[i][j][idx] = 0
+            elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '5z_vs_1ul' and self.args.use_prior == True:
+                for j in range(len(obs[0])):
+                    mask_indices = random.sample(range(9,dimension-2), mask_num)
                     for idx in mask_indices:
                         obs[i][j][idx] = 0
             else:
@@ -231,14 +244,14 @@ class DGI2CMAC:
         obs = batch["obs"][:, t]
         agentnum = len(obs[0])
         ratio = self.args.ratio
-        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r' or self.args.env_args['map_name'] == '1o_2r_vs_4r':
+        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r' or self.args.env_args['map_name'] == '1o_2r_vs_4r' and self.args.use_prior == True:
             mask_num = int(ratio*(agentnum-1))
         else:
             mask_num = int(ratio*agentnum)
         # print("mask_num",mask_num)
-        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r':
+        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_10b_vs_1r' and self.args.use_prior == True:
             mask_agent = random.sample(range(agentnum-1), mask_num)
-        if "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r':
+        elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r' and self.args.use_prior == True:
             mask_agent = random.sample(range(1,agentnum), mask_num)
         else:
             mask_agent = random.sample(range(agentnum), mask_num)

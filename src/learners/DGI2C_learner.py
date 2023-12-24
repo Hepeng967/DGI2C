@@ -111,11 +111,11 @@ class DGI2CLearner:
             # Do final vector prediction*******************************************************
             predicted_f = self.mac.agent.online_projection(curr_z)   # [bs, seq_len, spr_dim]#通过 self.projection,和 self.final_classifier所得到的一个表示
             tot_spr_loss = self.compute_spr_loss(predicted_f, target_projected, mask)#compute_spr_loss相当于就是把mask引入后把前两项做MSE误差计算
-            if  self.args.use_inverse_model:
-                predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
-                predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
-                sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
-                tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
+            # if  self.args.use_inverse_model:
+            #     predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
+            #     predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+            #     sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
+            #     tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
             if  self.args.use_rew_pred:
                 predicted_rew = self.latent_model.predict_reward(curr_z)   # [bs, seq_len, 1]
                 tot_rew_loss = self.compute_rew_loss(predicted_rew, rewards, mask)
@@ -129,25 +129,30 @@ class DGI2CLearner:
                 predicted_f = self.mac.agent.online_projection(curr_z)  # [bs, seq_len, spr_dim] 这个是只包含t+1~t+K的
                 tot_spr_loss += self.compute_spr_loss(predicted_f, target_projected[:, t+1:], mask[:, t+1:])#target_projected是包含1~t+K的
 
-                if self.args.use_inverse_model:
-                    predicted_act = F.softmax(self.latent_model.predict_action(z[:,t:-1],z[:,t+1:]),dim=-1)
-                    predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
-                    sample_act = actions_onehot[:,t:-1].reshape(*actions_onehot[:,t:-1].shape[:-2], -1)
-                    tot_inv_loss += self.compute_inv_loss(predicted_act, sample_act, mask[:,t:-1])
+                # if self.args.use_inverse_model:
+                #     predicted_act = F.softmax(self.latent_model.predict_action(z[:,t:-1],z[:,t+1:]),dim=-1)
+                #     predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                #     sample_act = actions_onehot[:,t:-1].reshape(*actions_onehot[:,t:-1].shape[:-2], -1)
+                #     tot_inv_loss += self.compute_inv_loss(predicted_act, sample_act, mask[:,t:-1])
                 if self.args.use_rew_pred:
                     predicted_rew = self.latent_model.predict_reward(curr_z)
                     tot_rew_loss += self.compute_rew_loss(predicted_rew, rewards[:, t+1:], mask[:, t+1:])
             #这个地方的coef是yaml里面配置的，用来配置各个损失之间的权重
-            if self.args.use_rew_pred and self.args.use_inverse_model:
-                repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss + self.args.inv_coef * tot_inv_loss
-                
-            elif self.args.use_rew_pred:
+            if self.args.use_rew_pred:
                 repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
             else:
+                # repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
                 repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
         else:
             repr_loss = vae_loss
-
+            
+        if  self.args.use_inverse_model:
+                predicted_act = F.softmax(self.latent_model.predict_action(z[:,:-1],z[:,1:]),dim=-1)
+                predicted_act = predicted_act.reshape(*predicted_act.shape[:-2], -1)
+                sample_act = actions_onehot[:,:-1].reshape(*actions_onehot[:,:-1].shape[:-2], -1)
+                tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
+                repr_loss += tot_inv_loss
+        
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
             self.logger.log_stat("vae_loss", vae_loss.item(), t_env)
@@ -155,8 +160,8 @@ class DGI2CLearner:
                 self.logger.log_stat("model_loss", tot_spr_loss.item(), t_env)
                 if self.args.use_rew_pred:
                     self.logger.log_stat("rew_pred_loss", tot_rew_loss.item(), t_env)
-                    if self.args.use_inverse_model:
-                        self.logger.log_stat("inverse_model_loss",tot_inv_loss.item(), t_env)
+            if self.args.use_inverse_model:
+                self.logger.log_stat("inverse_model_loss",tot_inv_loss.item(), t_env)
 
         return repr_loss
     

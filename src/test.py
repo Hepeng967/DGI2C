@@ -19,13 +19,15 @@ import random
 #     print(i)
 # for i in range(5):
 #     print(i)
-obs = [[random.randint(0,9) for _ in range(6)] for _ in range(6)]    
-agentnum = 7
-ratio = 0.5
-mask_num = int(ratio*(agentnum-1))
-mask_num = int(ratio*agentnum)
-# print("mask_num",mask_num)
-mask_agent = random.sample(range(agentnum-1), mask_num)
-print(mask_agent)
-mask_agent = random.sample(range(1,agentnum), mask_num)
-print(mask_agent)
+# obs = [[random.randint(0,9) for _ in range(6)] for _ in range(6)]    
+# agentnum = 7
+# ratio = 0.5
+# mask_num = int(ratio*(agentnum-1))
+# mask_num = int(ratio*agentnum)
+# # print("mask_num",mask_num)
+# mask_agent = random.sample(range(agentnum-1), mask_num)
+# print(mask_agent)
+# mask_agent = random.sample(range(1,agentnum), mask_num)
+# print(mask_agent)
+for i in range(11,84-3):
+    print(i)

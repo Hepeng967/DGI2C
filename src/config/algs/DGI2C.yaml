@@ -57,9 +57,8 @@ ob_embed_dim: 32
 momentum_tau: 1
 
 # configs about whether to use latent model learning
-use_latent_model: True
-use_rew_pred: True
-use_inverse_model: True
+use_latent_model: False
+use_rew_pred: False
 use_momentum_encoder: True
 use_residual: True
 pred_len: 2
@@ -88,9 +87,10 @@ noise_type: 0 # 噪声类别分为0、1、2，分别表示发送方添加噪声�
 # mask_obs: True
 # mask_num: 3
 use_mask: True
-ratio: 0.2
-mask_method: dimension
+ratio: 0.4
+mask_method: agent
 use_inverse_model: True
+use_prior: True
 
 # config for supplement inputs
 obs_use_sequence_sup: True
