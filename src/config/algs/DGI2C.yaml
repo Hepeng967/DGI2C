@@ -88,9 +88,9 @@ noise_type: 0 # 噪声类别分为0、1、2，分别表示发送方添加噪声�
 # mask_num: 3
 use_mask: True
 ratio: 0.4
-mask_method: agent
+mask_method: dimension
 use_inverse_model: True
 use_prior: True
-
+dont_use_latent_model: True
 # config for supplement inputs
 obs_use_sequence_sup: True

@@ -34,12 +34,12 @@ class DGI2CAgent(nn.Module):
                 nn.Linear(self.latent_dim, 64),
                 nn.ReLU(),
                 nn.Linear(64, self.args.spr_dim),
-            )#这个模块负责将自编码器的潜在表示（latent representation）投影到另一个空间，通常是一个更低维度的空间。这个投影操作的目的是学习数据的紧凑表示，以便在潜在空间中保持数据的重要特征。
+            )
             self.final_classifier = nn.Sequential(
                 nn.Linear(self.args.spr_dim, 64),
                 nn.ReLU(),
                 nn.Linear(64, self.args.spr_dim),
-            )#通常用于在潜在空间中进一步处理投影后的表示。在这里，self.final_classifier可能用于进一步调整投影后的表示，使其更适合特定的任务或学习目标。
+            )
             if self.args.use_momentum_encoder:
                 self.target_encoder = copy.deepcopy(self.encoder)
                 self.target_projection = copy.deepcopy(self.projection)
