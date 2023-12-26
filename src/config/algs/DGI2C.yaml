@@ -57,7 +57,7 @@ ob_embed_dim: 32
 momentum_tau: 1
 
 # configs about whether to use latent model learning
-use_latent_model: False
+use_latent_model: True
 use_rew_pred: False
 use_momentum_encoder: True
 use_residual: True
@@ -91,6 +91,6 @@ ratio: 0.4
 mask_method: dimension
 use_inverse_model: True
 use_prior: True
-dont_use_latent_model: True
+dont_use_latent_loss: True
 # config for supplement inputs
 obs_use_sequence_sup: True

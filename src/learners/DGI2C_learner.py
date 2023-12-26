@@ -140,6 +140,8 @@ class DGI2CLearner:
             #这个地方的coef是yaml里面配置的，用来配置各个损失之间的权重
             if self.args.use_rew_pred:
                 repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss + self.args.rew_pred_coef * tot_rew_loss
+            elif self.args.dont_use_latent_loss:
+                repr_loss = vae_loss
             else:
                 # repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
                 repr_loss = vae_loss + self.args.spr_coef * tot_spr_loss
