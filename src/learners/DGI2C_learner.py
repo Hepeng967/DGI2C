@@ -81,15 +81,22 @@ class DGI2CLearner:
             mask_recons_t, _,mask_z_t = self.mac.mask_vae_forward(batch, t) 
             mask_recons.append(mask_recons_t)
             mask_z.append(mask_z_t)
+            if t==(batch.max_seq_length-1):
+                print("mask_recons_t",mask_recons_t.shape)
         # recons.shape: [batch_size, seq_len, state_repre_dim]
+        print("mask_recons_before_stack",mask_recons.shape)
         mask_recons = th.stack(mask_recons, dim=1)  # Concat over time
+        print("mask_recons_after_stack",mask_recons.shape)
         mask_z = th.stack(mask_z, dim=1)
         
 
+        
         bs, seq_len  = states.shape[0], states.shape[1]
         #loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#返回的是{loss：||s^t - st||**2}
         if self.args.use_mask == True:
-            loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask后的z和recons去计算mae
+            print("mask_recons_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
+            print("state_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
+            loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask和recons去计算mae
             # print("mask_recons")
         elif self.args.use_mask == False:
             loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))

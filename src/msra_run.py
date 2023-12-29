@@ -304,7 +304,7 @@ def run_sequential(args, logger):
 
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
-        buffer.insert_episode_batch(episode_batch)
+        buffer.insert_episode_batch(episode_batch)#将batch存入buffer中
 
         if buffer.can_sample(args.batch_size):
             episode_sample = buffer.sample(args.batch_size)

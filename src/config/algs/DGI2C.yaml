@@ -91,6 +91,6 @@ ratio: 0.4
 mask_method: dimension
 use_inverse_model: True
 use_prior: True
-dont_use_latent_loss: True
+dont_use_latent_loss: False
 # config for supplement inputs
-obs_use_sequence_sup: True
+obs_use_sequence_sup: True 

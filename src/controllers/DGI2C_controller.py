@@ -210,7 +210,6 @@ class DGI2CMAC:
             mask_num = int(ratio*(dimension-14))
         elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '1o_2r_vs_4r' and self.args.use_prior == True:
             mask_num = int(ratio*(dimension-35))
-            print(mask_num)
         elif "map_name" in self.args.env_args and self.args.env_args['map_name'] == '5z_vs_1ul' and self.args.use_prior == True:
             mask_num = int(ratio*(dimension-11))
         else:
