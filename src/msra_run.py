@@ -301,11 +301,14 @@ def run_sequential(args, logger):
     logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
 
     while runner.t_env <= args.t_max:
-
+        episode_start = time.time()
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
         buffer.insert_episode_batch(episode_batch)#将batch存入buffer中
-
+        
+        time1 = time.time() 
+        # print("time1", time1 - episode_start)#0.3
+        
         if buffer.can_sample(args.batch_size):
             episode_sample = buffer.sample(args.batch_size)
 
@@ -360,12 +363,16 @@ def run_sequential(args, logger):
             learner.save_models(save_path)
 
         episode += args.batch_size_run
-
+        if episode == 1:
+            first_episode_time = time.time() - start_time
+            logger.console_logger.info("first_episode_time:{}".format(first_episode_time))
+            
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
-
+        episode_end = time.time()
+        # print("per_episode time",episode_end-episode_start)#0.6左右
     runner.close_env()
     logger.console_logger.info("Finished Training")
 

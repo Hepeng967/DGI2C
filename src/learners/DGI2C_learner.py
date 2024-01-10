@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from components.standarize_stream import RunningMeanStd
 import os
+import time
 
 class DGI2CLearner:
     def __init__(self, mac, latent_model, scheme, logger, args):
@@ -81,12 +82,12 @@ class DGI2CLearner:
             mask_recons_t, _,mask_z_t = self.mac.mask_vae_forward(batch, t) 
             mask_recons.append(mask_recons_t)
             mask_z.append(mask_z_t)
-            if t==(batch.max_seq_length-1):
-                print("mask_recons_t",mask_recons_t.shape)
+            # if t==(batch.max_seq_length-1):
+            #     print("mask_recons_t",mask_recons_t.shape)
         # recons.shape: [batch_size, seq_len, state_repre_dim]
-        print("mask_recons_before_stack",mask_recons.shape)
+        # print("mask_recons_before_stack",mask_recons.shape)
         mask_recons = th.stack(mask_recons, dim=1)  # Concat over time
-        print("mask_recons_after_stack",mask_recons.shape)
+        # print("mask_recons_after_stack",mask_recons.shape)
         mask_z = th.stack(mask_z, dim=1)
         
 
@@ -94,8 +95,8 @@ class DGI2CLearner:
         bs, seq_len  = states.shape[0], states.shape[1]
         #loss_dict = self.mac.agent.encoder.loss_function(recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#返回的是{loss：||s^t - st||**2}
         if self.args.use_mask == True:
-            print("mask_recons_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
-            print("state_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
+            # print("mask_recons_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
+            # print("state_after_reshape",(mask_recons.reshape(bs*seq_len, -1)).shape)
             loss_dict = self.mac.agent.encoder.loss_function(mask_recons.reshape(bs*seq_len, -1), states.reshape(bs*seq_len, -1))#用mask和recons去计算mae
             # print("mask_recons")
         elif self.args.use_mask == False:
@@ -162,7 +163,7 @@ class DGI2CLearner:
             tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
             repr_loss += tot_inv_loss
         
-        if t_env - self.log_stats_t >= self.args.learner_log_interval:
+        if t_env % self.args.learner_log_interval == 0:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
             self.logger.log_stat("vae_loss", vae_loss.item(), t_env)
             if self.args.use_latent_model:
@@ -215,7 +216,7 @@ class DGI2CLearner:
         mac_out = []
         self.mac.init_hidden(batch.batch_size)
         for t in range(batch.max_seq_length):
-            state_repr_t = self.mac.enc_forward(batch, t=t)
+            state_repr_t = self.mac.mask_enc_forward(batch, t=t)
             if not self.args.rl_signal:
                 state_repr_t = state_repr_t.detach()
             agent_outs = self.mac.rl_forward(batch, state_repr_t, t=t)
@@ -228,7 +229,7 @@ class DGI2CLearner:
         target_mac_out = []
         self.target_mac.init_hidden(batch.batch_size)
         for t in range(batch.max_seq_length):
-            state_repr_t = self.target_mac.enc_forward(batch, t=t)
+            state_repr_t = self.target_mac.mask_enc_forward(batch, t=t)
             target_agent_outs = self.target_mac.rl_forward(batch, state_repr_t, t=t)
             target_mac_out.append(target_agent_outs)
 
@@ -290,7 +291,7 @@ class DGI2CLearner:
             self._update_targets_soft(self.args.target_update_interval_or_tau)
             self.mac.agent.momentum_update()
 
-        if t_env - self.log_stats_t >= self.args.learner_log_interval:
+        if t_env % self.args.learner_log_interval == 0:
             self.logger.log_stat("rl_loss", rl_loss.item(), t_env)
             self.logger.log_stat("tot_loss", tot_loss.item(), t_env)
             self.logger.log_stat("grad_norm", grad_norm.item(), t_env) 
@@ -302,9 +303,12 @@ class DGI2CLearner:
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Representation learning training
+        time0 = time.time()
         repr_loss = self.repr_train(batch, t_env, episode_num)
         # RL training
         self.rl_train(batch, t_env, episode_num, repr_loss)
+        time1 = time.time()
+        print("time1",time1-time0)#0.25~0.3
 
     def test_encoder(self, batch: EpisodeBatch):
         # states.shape: [batch_size, seq_len, state_dim]

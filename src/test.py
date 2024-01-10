@@ -1,33 +1,13 @@
+import torch
 
-import random
+# 假设你的张量为 tensor，大小为 (20, 11, 84)
+tensor = torch.rand(20, 11, 84)
 
-# obs = [[random.randint(0,9) for _ in range(6)] for _ in range(6)] 
-# print("obs",obs)
-# dimension = len(obs[0]) 
-# ratio = 0.5
-# mask_num = int(ratio*dimension)
-# # 将指定行的数据全部设为0
-# for i in range(len(obs)-1):
-#     mask_indices = random.sample(range(dimension), mask_num)
-#     middle = obs[i]
-#     for j in mask_indices:
-#         middle[j]=0
-#     obs[i] = middle
-# print("obs_next",obs)
+# 创建一个大小为 (11, 11) 的单位矩阵
+identity_matrix = torch.eye(11)
 
-# for i in range(1,5):
-#     print(i)
-# for i in range(5):
-#     print(i)
-# obs = [[random.randint(0,9) for _ in range(6)] for _ in range(6)]    
-# agentnum = 7
-# ratio = 0.5
-# mask_num = int(ratio*(agentnum-1))
-# mask_num = int(ratio*agentnum)
-# # print("mask_num",mask_num)
-# mask_agent = random.sample(range(agentnum-1), mask_num)
-# print(mask_agent)
-# mask_agent = random.sample(range(1,agentnum), mask_num)
-# print(mask_agent)
-for i in range(11,84-3):
-    print(i)
+# 在最后两个维度上拼接单位矩阵
+tensor_with_identity = torch.cat([tensor, identity_matrix.unsqueeze(0).expand(20, -1, -1)], dim=-1)
+
+# 打印结果
+print(tensor_with_identity.shape)
