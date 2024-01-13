@@ -163,8 +163,9 @@ class DGI2CLearner:
             tot_inv_loss = self.compute_inv_loss(predicted_act, sample_act, mask[:,:-1])
             repr_loss += tot_inv_loss
         
-        if t_env % self.args.learner_log_interval == 0:
+        if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("repr_loss", repr_loss.item(), t_env)
+            print("repr_loss",repr_loss.item())
             self.logger.log_stat("vae_loss", vae_loss.item(), t_env)
             if self.args.use_latent_model:
                 self.logger.log_stat("model_loss", tot_spr_loss.item(), t_env)
@@ -172,6 +173,7 @@ class DGI2CLearner:
                     self.logger.log_stat("rew_pred_loss", tot_rew_loss.item(), t_env)
             if self.args.use_inverse_model:
                 self.logger.log_stat("inverse_model_loss",tot_inv_loss.item(), t_env)
+                print("inverse_loss",tot_inv_loss.item())
 
         return repr_loss
     
@@ -291,9 +293,11 @@ class DGI2CLearner:
             self._update_targets_soft(self.args.target_update_interval_or_tau)
             self.mac.agent.momentum_update()
 
-        if t_env % self.args.learner_log_interval == 0:
+        if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("rl_loss", rl_loss.item(), t_env)
+            print("rl_loss",rl_loss.item())
             self.logger.log_stat("tot_loss", tot_loss.item(), t_env)
+            print("tot_loss",tot_loss.item())
             self.logger.log_stat("grad_norm", grad_norm.item(), t_env) 
             mask_elems = mask.sum().item()
             self.logger.log_stat("td_error_abs", (masked_td_error.abs().sum().item()/mask_elems), t_env)
@@ -308,7 +312,7 @@ class DGI2CLearner:
         # RL training
         self.rl_train(batch, t_env, episode_num, repr_loss)
         time1 = time.time()
-        print("time1",time1-time0)#0.25~0.3
+        # print("time1",time1-time0)#0.25~0.3
 
     def test_encoder(self, batch: EpisodeBatch):
         # states.shape: [batch_size, seq_len, state_dim]

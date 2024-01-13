@@ -59,6 +59,14 @@ class DGI2CMAC:
             return state_repr.view(ep_batch.batch_size, -1)
         else:
             return state_repr.view(ep_batch.batch_size, self.n_agents, -1)
+    
+    def mask_enc_forward(self, ep_batch, t, test_mode=False):#用来执行强化训练时，观测通过encoder网络的
+        agent_inputs = self._build_mask_inputs(ep_batch, t)
+        state_repr, self.encoder_hidden_states = self.agent.enc_forward(agent_inputs, self.encoder_hidden_states)
+        if self.args.state_encoder in ["ob_attn_ae", "ob_attn_skipsum_ae", "ob_attn_skipcat_ae"]:
+            return state_repr.view(ep_batch.batch_size, -1)
+        else:
+            return state_repr.view(ep_batch.batch_size, self.n_agents, -1)
 
     def vae_forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)
